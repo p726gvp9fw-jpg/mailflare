@@ -133,7 +133,7 @@ export function ComposeForm({
 				setSubject(draft.subject ?? "");
 				const stored = splitQuotedHtml(draft.htmlBody || textToHtml(draft.textBody));
 				setHtml(stored.body);
-				setQuotedHtml(stored.quoted);
+				setQuotedHtml(draft.inReplyTo ? null : stored.quoted);
 				setStoredAttachments(draft.attachments?.filter((item) => item.disposition === "attachment") ?? []);
 				setLoadedDraftMailboxId(draft.mailboxId);
 				setLoadedDraftFrom(getEmailAddress(draft.fromAddr).toLowerCase());
@@ -231,7 +231,7 @@ export function ComposeForm({
 			return;
 		}
 		setLoading(true);
-		const fullHtml = joinQuotedHtml(html, quotedHtml);
+		const fullHtml = threading?.inReplyTo ? html : joinQuotedHtml(html, quotedHtml);
 		const res = await authFetch("/api/send", {
 			method: "POST",
 			body: buildSendFormData({
