@@ -49,6 +49,26 @@ export default {
 				return;
 			}
 
+			// Optional multi-recipient copies; keep normal mailbox delivery unchanged.
+			if (message.headers.get(MAILFLARE_FORWARDED_HEADER) !== "1") {
+				const config = (env as CloudflareEnv & { MAILFLARE_FORWARDING?: string }).MAILFLARE_FORWARDING;
+				if (config) {
+					try {
+						const routes = JSON.parse(config) as Record<string, unknown>;
+						const targets = routes[message.to.trim().toLowerCase()];
+						if (Array.isArray(targets)) {
+							for (const target of new Set(targets)) {
+								if (typeof target === "string" && target.trim() && target.trim().toLowerCase() !== message.to.trim().toLowerCase()) {
+									await forwardMessage(message, target.trim());
+								}
+							}
+						}
+					} catch (error) {
+						console.error("Configured forwarding failed; retaining mailbox delivery", error);
+					}
+				}
+			}
+
 			if (decision?.action === "forward" && decision.forwardTo) {
 				const forwarded = await forwardMessage(message, decision.forwardTo);
 				// A forward rule drops the message unless it was explicitly asked to keep a copy.
